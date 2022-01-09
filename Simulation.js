@@ -5,6 +5,8 @@ var Player = /** @class */ (function () {
     function Player(num) {
         this.position = num ? num : 0;
         this.firstTries = 0;
+        this.rounds = 0;
+        this.dealerRounds = 0;
         this.correctGuesses = 0;
         this.getGuessedOn = 0;
         this.sips = 0;
@@ -147,20 +149,26 @@ var Simulation = /** @class */ (function () {
         if (tablePos !== -1)
             this.table[tablePos].count += 1;
     };
+    Simulation.prototype.getGameInfo = function () {
+        return {
+            numOfPlayers: this.numOfPlayers,
+            playerData: this.players
+        };
+    };
     Simulation.prototype.startGame = function () {
         //console.log(this.deck, this.table);
         var running = true;
         while (running === true) {
-            console.log(this.currentDealer, this.currentPlayer);
             //console.log(this.table);
+            this.players[this.currentPlayer - 1].rounds++;
+            this.players[this.currentDealer - 1].dealerRounds++;
             var currCard = this.drawCard();
             //console.log(`Current Card is: ${currCard.value} of ${currCard.suit}`);
             var firstGuess = this.firstGuess();
             //console.log(`First Guess was: ${firstGuess}`);
             if (firstGuess === currCard.value) {
                 //console.log('Nice! First Try');
-                //Adding to Stats
-                console.log(this.players);
+                //Adding to Stats                
                 this.players[this.currentPlayer - 1].firstTries++;
                 this.players[this.currentPlayer - 1].correctGuesses++;
                 this.players[this.currentDealer - 1].getGuessedOn++;
@@ -187,10 +195,12 @@ var Simulation = /** @class */ (function () {
             this.playCard(currCard);
             //console.log(`Cards Remaining: ${this.deck.length}`);
             if (this.incorrectTotalGuesses === 3) {
+                //console.log('Dealer is changing...');
                 this.incorrectTotalGuesses = 0;
                 this.currentDealer++;
                 if (this.currentDealer > this.numOfPlayers)
                     this.currentDealer = 1;
+                //console.log(`New Dealer is Player Nr. ${this.players[this.currentDealer - 1].position}`);
             }
             this.currentPlayer++;
             if (this.currentPlayer === this.currentDealer)
@@ -200,7 +210,6 @@ var Simulation = /** @class */ (function () {
             if (this.deck.length === 0)
                 running = false;
         }
-        console.log(this.players);
     };
     return Simulation;
 }());

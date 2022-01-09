@@ -1,22 +1,31 @@
 "use strict";
 exports.__esModule = true;
 var Simulation_1 = require("./Simulation");
-console.log('Simulating...');
+var fs_1 = require("fs");
+console.log('Simulating..');
 var fails = 0;
 var testSim = new Simulation_1.Simulation('outer', 5);
 testSim.startGame();
-/*
-const simulationLength = 10000;
-
-for (let i = 0; i < simulationLength; i++) {
+var simulationLength = 10000;
+var output = [];
+for (var i = 0; i < simulationLength; i++) {
+    if (i % 1000 == 0) {
+        console.log("Simulating Games ".concat(1000 * Math.floor(i / 1000), " to ").concat(1000 * Math.floor(i / 1000) + 1000));
+    }
     //const element = array[i];
-    try{
-        let testSim = new Simulation('outer', 5);
-        testSim.startGame();
-    } catch(e){
-        fails++
+    try {
+        var testSim_1 = new Simulation_1.Simulation('outer', 5);
+        testSim_1.startGame();
+        output.push(testSim_1.getGameInfo());
+    }
+    catch (e) {
+        fails++;
     }
 }
-
+console.log('writing file...');
+(0, fs_1.writeFile)("".concat(__dirname, "/test/test.txt"), JSON.stringify(output), function (err) {
+    console.log(err);
+    console.log('WROTE FILE :)');
+});
 console.log('Done!');
-console.log(`There were ${fails} Fails`); */
+console.log("There were ".concat(fails, " Fails"));
