@@ -1,5 +1,5 @@
 import { Simulation } from "./Simulation";
-import { writeFile, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 
 console.log('Simulating..');
 
