@@ -1,12 +1,28 @@
 "use strict";
 exports.__esModule = true;
 exports.Simulation = void 0;
+var Player = /** @class */ (function () {
+    function Player(num) {
+        this.position = num ? num : 0;
+        this.firstTries = 0;
+        this.correctGuesses = 0;
+        this.getGuessedOn = 0;
+        this.sips = 0;
+    }
+    return Player;
+}());
 var Simulation = /** @class */ (function () {
-    function Simulation(type) {
+    function Simulation(type, numOfPlayers) {
         this.deck = [];
         this.table = [];
         this.type = type;
+        this.numOfPlayers = numOfPlayers;
+        this.players = Array.from({ length: numOfPlayers }, function (x, i) { return new Player(i + 1); });
+        this.currentPlayer = 2;
+        this.currentDealer = 1;
+        this.incorrectTotalGuesses = 0;
         this.init();
+        this.shuffleCards();
     }
     Simulation.prototype.init = function () {
         for (var i = 2; i <= 14; i++) {
@@ -38,60 +54,69 @@ var Simulation = /** @class */ (function () {
         }
     };
     Simulation.prototype.drawCard = function () {
-        return this.deck.splice(0, 1);
+        var card = this.deck[0];
+        this.deck.splice(0, 1);
+        return card;
     };
     Simulation.prototype.firstGuess = function () {
         var relevantTable = this.table.filter(function (x) { return x.count < 4; });
-        var probabilityBoard = this.calcProbability(this.deck.length);
         var lowestCheck = this.checkLowestCount(2);
         if (lowestCheck !== false)
             return lowestCheck;
-        var middlePos = this.findNumberInTableWithRelevantBoard(Math.ceil(relevantTable.length / 2));
+        var middle = Math.ceil(relevantTable.length / 2);
+        if (middle === undefined)
+            middle = Math.floor(relevantTable.length / 2);
         if (this.type === 'middle') {
-            return middlePos;
+            if (relevantTable.length === 1)
+                return relevantTable[0].value;
+            return relevantTable[middle].value;
         }
         else {
-            var left = probabilityBoard.slice(0, middlePos);
-            var right = probabilityBoard.slice(-middlePos);
-            var leftP = left.reduce(function (acc, cur) { return acc + cur; });
-            var rightP = right.reduce(function (acc, cur) { return acc + cur; });
+            var left = relevantTable.slice(0, middle);
+            var right = relevantTable.slice(-middle);
+            var leftP = this.calcProbability(left, this.calcCardsLeft(left)).reduce(function (acc, curr) { return acc + curr; });
+            var rightP = this.calcProbability(right, this.calcCardsLeft(right)).reduce(function (acc, curr) { return acc + curr; });
             //Probability in left half is higher
             if (leftP > rightP) {
-                return this.findNumberInTableWithRelevantBoard(Math.ceil(left.length / 2));
+                if (left.length === 1)
+                    return left[0].value;
+                return left[Math.ceil(left.length / 2)].value;
             }
             else {
-                return this.findNumberInTableWithRelevantBoard(Math.floor(right.length / 2));
+                if (right.length === 1)
+                    return right[0].value;
+                return right[Math.floor(right.length / 2)].value;
             }
         }
     };
     Simulation.prototype.secondGuess = function (value, higher) {
-        var lower = this.table.slice(0, value);
-        var upper = this.table.slice(-value);
+        var lower = this.table.slice(0, (value - 2));
+        var upper = this.table.slice(value - 1, this.table.length);
         if (higher === true) {
-            var upperP = this.calcProbability(this.calcCardsLeft(upper));
-            return 0;
+            //console.log('Card must be higher than guess');
+            var upperP = this.calcProbability(upper, this.calcCardsLeft(upper));
+            var highP = Math.max.apply(Math, upperP);
+            var indicies = this.getAllIndicies(upperP, highP);
+            return upper[indicies[Math.floor(Math.random() * indicies.length)]].value;
         }
         else {
-            return 0;
+            //console.log('Card must be lower than guess');
+            var lowerP = this.calcProbability(lower, this.calcCardsLeft(lower));
+            var highP = Math.max.apply(Math, lowerP);
+            var indicies = this.getAllIndicies(lowerP, highP);
+            return lower[indicies[Math.floor(Math.random() * indicies.length)]].value;
         }
-        //split table at value
-        //if higher === true --> search in upper half
-        //if higher === false --> search in lower half
     };
-    Simulation.prototype.findNumberInTableWithRelevantBoard = function (number) {
-        var currentPos = 0;
-        var validValues = 0;
-        for (var i = 0; i <= this.table.length; i++) {
-            currentPos = i;
-            if (this.table[i].count < 4)
-                validValues++;
-            if (validValues = number)
-                break;
+    Simulation.prototype.getAllIndicies = function (arr, val) {
+        var indicies = [];
+        for (var i = 0; i < arr.length; i++) {
+            if (arr[i] === val)
+                indicies.push(i);
         }
-        return currentPos;
+        return indicies;
     };
     Simulation.prototype.checkLowestCount = function (threshhold) {
-        var lowest = Math.min.apply(Math, this.table);
+        var lowest = Math.min.apply(Math, this.table.map(function (x) { return x.count; }));
         var assumption = true;
         this.table.forEach(function (x) {
             if (x.count !== 4) {
@@ -108,16 +133,74 @@ var Simulation = /** @class */ (function () {
             return lowest;
         }
     };
-    Simulation.prototype.calcProbability = function (numOfCardsLeft) {
-        return this.table.map(function (x) {
-            return (4 - x.count) / numOfCardsLeft;
+    Simulation.prototype.calcProbability = function (board, numOfCardsLeft) {
+        return board.map(function (x) {
+            return Math.round(((4 - x.count) / numOfCardsLeft) * 1000) / 1000;
         });
     };
     Simulation.prototype.calcCardsLeft = function (board) {
         return board.map(function (x) { return x.count; }).reduce(function (acc, curr) { return acc + (4 - curr); });
     };
     Simulation.prototype.playCard = function (card) {
-        this.table[card.value].count += 1;
+        //console.log(`A ${card.value} was played`);
+        var tablePos = this.table.findIndex(function (x) { return x.value === card.value; });
+        if (tablePos !== -1)
+            this.table[tablePos].count += 1;
+    };
+    Simulation.prototype.startGame = function () {
+        //console.log(this.deck, this.table);
+        var running = true;
+        while (running === true) {
+            console.log(this.currentDealer, this.currentPlayer);
+            //console.log(this.table);
+            var currCard = this.drawCard();
+            //console.log(`Current Card is: ${currCard.value} of ${currCard.suit}`);
+            var firstGuess = this.firstGuess();
+            //console.log(`First Guess was: ${firstGuess}`);
+            if (firstGuess === currCard.value) {
+                //console.log('Nice! First Try');
+                //Adding to Stats
+                console.log(this.players);
+                this.players[this.currentPlayer - 1].firstTries++;
+                this.players[this.currentPlayer - 1].correctGuesses++;
+                this.players[this.currentDealer - 1].getGuessedOn++;
+                this.players[this.currentDealer - 1].sips += 7;
+            }
+            else {
+                var higher = false;
+                if (firstGuess < currCard.value)
+                    higher = true;
+                var secondGuess = this.secondGuess(firstGuess, higher);
+                //console.log(`Second Guess was: ${secondGuess}`)
+                if (secondGuess === currCard.value) {
+                    //Guessed Correctly on the second try
+                    //Adding to Stats
+                    this.players[this.currentPlayer - 1].correctGuesses++;
+                    this.players[this.currentDealer - 1].getGuessedOn++;
+                    this.players[this.currentDealer - 1].sips += 5;
+                }
+                else {
+                    this.players[this.currentPlayer - 1].sips += Math.abs(secondGuess - currCard.value);
+                    this.incorrectTotalGuesses++;
+                }
+            }
+            this.playCard(currCard);
+            //console.log(`Cards Remaining: ${this.deck.length}`);
+            if (this.incorrectTotalGuesses === 3) {
+                this.incorrectTotalGuesses = 0;
+                this.currentDealer++;
+                if (this.currentDealer > this.numOfPlayers)
+                    this.currentDealer = 1;
+            }
+            this.currentPlayer++;
+            if (this.currentPlayer === this.currentDealer)
+                this.currentPlayer++;
+            if (this.currentPlayer > this.numOfPlayers)
+                this.currentPlayer = 1;
+            if (this.deck.length === 0)
+                running = false;
+        }
+        console.log(this.players);
     };
     return Simulation;
 }());
