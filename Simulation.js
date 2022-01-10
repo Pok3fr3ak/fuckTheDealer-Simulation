@@ -1,4 +1,15 @@
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 exports.__esModule = true;
 exports.Simulation = void 0;
 var Player = /** @class */ (function () {
@@ -13,6 +24,19 @@ var Player = /** @class */ (function () {
     }
     return Player;
 }());
+var CleanPlayerData = /** @class */ (function () {
+    function CleanPlayerData() {
+        this.position = 0;
+        this.firstTries = {};
+        this.rounds = {};
+        this.dealerRounds = {};
+        this.correctGuesses = {};
+        this.getGuessedOn = {};
+        this.sips = {};
+        this.wins = 0;
+    }
+    return CleanPlayerData;
+}());
 var Simulation = /** @class */ (function () {
     function Simulation(type, numOfPlayers) {
         this.deck = [];
@@ -26,6 +50,46 @@ var Simulation = /** @class */ (function () {
         this.init();
         this.shuffleCards();
     }
+    Simulation.cleanData = function (data) {
+        var returnData = new Array(data[0].numOfPlayers).fill(0).map(function (x) { return new CleanPlayerData(); });
+        data.forEach(function (x, i) {
+            var sips = new Array(x.numOfPlayers).fill(0);
+            x.playerData.forEach(function (x, i) {
+                sips[i] = x.sips;
+            });
+            var lowest = Math.min.apply(Math, sips);
+            var winners = [];
+            for (var i_1 = 0; i_1 < sips.length; i_1++) {
+                if (sips[i_1] === lowest)
+                    winners.push(i_1);
+            }
+            x.playerData.forEach(function (x, i) {
+                winners.forEach(function (x, j) {
+                    if (i === x)
+                        returnData[i].wins++;
+                });
+                returnData[i].position = x.position;
+                returnData[i].rounds[x.rounds] = (returnData[i].rounds["".concat(x.rounds)] || 0) + 1;
+                returnData[i].dealerRounds[x.dealerRounds] = (returnData[i].dealerRounds[x.dealerRounds] || 0) + 1;
+                returnData[i].firstTries[x.firstTries] = (returnData[i].firstTries[x.firstTries] || 0) + 1;
+                returnData[i].correctGuesses[x.correctGuesses] = (returnData[i].correctGuesses[x.correctGuesses] || 0) + 1;
+                returnData[i].getGuessedOn[x.getGuessedOn] = (returnData[i].getGuessedOn[x.getGuessedOn] || 0) + 1;
+                returnData[i].sips[x.sips] = (returnData[i].sips[x.sips] || 0) + 1;
+            });
+        });
+        return Simulation.getOtherStats(returnData);
+    };
+    Simulation.getOtherStats = function (data) {
+        return (data.map(function (x) {
+            var totalSips = 0;
+            Object.entries(x.sips).forEach(function (_a) {
+                var key = _a[0], val = _a[1];
+                totalSips += parseInt(key) * val;
+            });
+            var newPlayerData = __assign(__assign({}, x), { winRate: Math.floor((x.wins / 10000) * 10000) / 100, avgSips: totalSips / 10000 });
+            return newPlayerData;
+        }));
+    };
     Simulation.prototype.init = function () {
         for (var i = 2; i <= 14; i++) {
             this.deck.push({

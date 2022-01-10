@@ -17,7 +17,7 @@ class Player {
     getGuessedOn: number
     sips: number
 
-    constructor(num?:number){
+    constructor(num?: number) {
         this.position = num ? num : 0;
         this.firstTries = 0;
         this.rounds = 0;
@@ -25,6 +25,40 @@ class Player {
         this.correctGuesses = 0;
         this.getGuessedOn = 0;
         this.sips = 0;
+    }
+}
+
+class CleanPlayerData {
+    position: number
+    firstTries: {
+        [key: string]: number
+    }
+    rounds: {
+        [key: string]: number
+    }
+    dealerRounds: {
+        [key: string]: number
+    }
+    correctGuesses: {
+        [key: string]: number
+    }
+    getGuessedOn: {
+        [key: string]: number
+    }
+    sips: {
+        [key: string]: number
+    }
+    wins: number
+
+    constructor() {
+        this.position = 0;
+        this.firstTries = {};
+        this.rounds = {};
+        this.dealerRounds = {};
+        this.correctGuesses = {};
+        this.getGuessedOn = {};
+        this.sips = {};
+        this.wins = 0;
     }
 }
 
@@ -44,13 +78,60 @@ class Simulation {
         this.table = [];
         this.type = type;
         this.numOfPlayers = numOfPlayers;
-        this.players = Array.from({length: numOfPlayers}, (x, i)=> new Player(i + 1))
+        this.players = Array.from({ length: numOfPlayers }, (x, i) => new Player(i + 1))
         this.currentPlayer = 2;
         this.currentDealer = 1;
         this.incorrectTotalGuesses = 0;
 
         this.init();
         this.shuffleCards();
+    }
+
+    static cleanData(data: Array<{ numOfPlayers: number, playerData: Player[] }>) {
+        let returnData = new Array(data[0].numOfPlayers).fill(0).map(x => new CleanPlayerData())
+        data.forEach((x, i) => {
+            let sips = new Array(x.numOfPlayers).fill(0);
+            x.playerData.forEach((x, i) => {
+                sips[i] = x.sips
+            })
+
+            let lowest = Math.min(...sips)
+            let winners:number[] = [];
+            for (let i = 0; i < sips.length; i++) {
+                if (sips[i] === lowest) winners.push(i)
+            }
+  
+            x.playerData.forEach((x, i) => {
+                winners.forEach((x, j) => {
+                    if(i === x) returnData[i].wins++;
+                })
+                returnData[i].position = x.position;
+                returnData[i].rounds[x.rounds] = (returnData[i].rounds[`${x.rounds}`] || 0) + 1;
+                returnData[i].dealerRounds[x.dealerRounds] = (returnData[i].dealerRounds[x.dealerRounds] || 0) + 1
+                returnData[i].firstTries[x.firstTries] = (returnData[i].firstTries[x.firstTries] || 0) + 1
+                returnData[i].correctGuesses[x.correctGuesses] = (returnData[i].correctGuesses[x.correctGuesses] || 0) + 1
+                returnData[i].getGuessedOn[x.getGuessedOn] = (returnData[i].getGuessedOn[x.getGuessedOn] || 0) + 1
+                returnData[i].sips[x.sips] = (returnData[i].sips[x.sips] || 0) + 1
+            })
+        })
+        return Simulation.getOtherStats(returnData)
+    }
+
+    static getOtherStats(data: CleanPlayerData[]): any {
+        return (data.map(x => {
+            let totalSips = 0;
+            Object.entries(x.sips).forEach(([key, val]) => {
+                totalSips += parseInt(key) * val
+            })
+
+            let newPlayerData = {
+                ...x,
+                winRate: Math.floor((x.wins/10000) * 10000) / 100,
+                avgSips: totalSips / 10000
+            };
+
+            return newPlayerData
+        }))
     }
 
     init() {
@@ -124,7 +205,6 @@ class Simulation {
                 return right[Math.floor(right.length / 2)].value;
             }
         }
-
     }
 
     secondGuess(value: number, higher: boolean): number {
@@ -193,7 +273,7 @@ class Simulation {
         if (tablePos !== -1) this.table[tablePos].count += 1;
     }
 
-    getGameInfo(){
+    getGameInfo() {
         return {
             numOfPlayers: this.numOfPlayers,
             playerData: this.players
@@ -218,19 +298,19 @@ class Simulation {
                 this.players[this.currentPlayer - 1].firstTries++
                 this.players[this.currentPlayer - 1].correctGuesses++
                 this.players[this.currentDealer - 1].getGuessedOn++
-                this.players[this.currentDealer - 1].sips +=7
+                this.players[this.currentDealer - 1].sips += 7
             } else {
                 let higher = false;
                 if (firstGuess < currCard.value) higher = true;
                 let secondGuess = this.secondGuess(firstGuess, higher);
                 //console.log(`Second Guess was: ${secondGuess}`)
 
-                if(secondGuess === currCard.value){
+                if (secondGuess === currCard.value) {
                     //Guessed Correctly on the second try
                     //Adding to Stats
                     this.players[this.currentPlayer - 1].correctGuesses++
                     this.players[this.currentDealer - 1].getGuessedOn++
-                    this.players[this.currentDealer - 1].sips +=5
+                    this.players[this.currentDealer - 1].sips += 5
                 } else {
                     this.players[this.currentPlayer - 1].sips += Math.abs(secondGuess - currCard.value)
                     this.incorrectTotalGuesses++;
@@ -239,22 +319,22 @@ class Simulation {
             this.playCard(currCard)
             //console.log(`Cards Remaining: ${this.deck.length}`);
 
-            if(this.incorrectTotalGuesses === 3){
+            if (this.incorrectTotalGuesses === 3) {
                 //console.log('Dealer is changing...');
-                
+
                 this.incorrectTotalGuesses = 0;
                 this.currentDealer++
-                if(this.currentDealer > this.numOfPlayers) this.currentDealer = 1;
+                if (this.currentDealer > this.numOfPlayers) this.currentDealer = 1;
                 //console.log(`New Dealer is Player Nr. ${this.players[this.currentDealer - 1].position}`);
-                
+
             }
 
             this.currentPlayer++;
-            if(this.currentPlayer === this.currentDealer) this.currentPlayer++;
-            if(this.currentPlayer > this.numOfPlayers) this.currentPlayer = 1;
-            
+            if (this.currentPlayer === this.currentDealer) this.currentPlayer++;
+            if (this.currentPlayer > this.numOfPlayers) this.currentPlayer = 1;
+
             if (this.deck.length === 0) running = false;
-        }        
+        }
     }
 }
 

@@ -30,8 +30,8 @@ for (var i = 0; i < simulationLength; i++) {
 }
 console.log('writing files...');
 for (var i = 5; i <= 10; i++) {
-    (0, fs_1.writeFileSync)("".concat(__dirname, "/out/").concat(i, "-players-outer.txt"), JSON.stringify(outer[i]));
-    (0, fs_1.writeFileSync)("".concat(__dirname, "/out/").concat(i, "-players-middle.txt"), JSON.stringify(middle[i]));
+    (0, fs_1.writeFileSync)("".concat(__dirname, "/out/new/").concat(i, "-players-outer.txt"), JSON.stringify(Simulation_1.Simulation.cleanData(outer[i])));
+    (0, fs_1.writeFileSync)("".concat(__dirname, "/out/new/").concat(i, "-players-middle.txt"), JSON.stringify(Simulation_1.Simulation.cleanData(middle[i])));
 }
 console.log('Done!');
 console.log("There were ".concat(fails, " Fails"));

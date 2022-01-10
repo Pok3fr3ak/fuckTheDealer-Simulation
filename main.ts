@@ -18,7 +18,7 @@ for (let i = 0; i < simulationLength; i++) {
     }
     //const element = array[i];
 
-    for(let i = 5; i <= 10; i++){
+    for (let i = 5; i <= 10; i++) {
         try {
             let outerTestSim = new Simulation('outer', i);
             outerTestSim.startGame();
@@ -35,10 +35,10 @@ for (let i = 0; i < simulationLength; i++) {
 }
 console.log('writing files...');
 
-for(let i = 5; i <= 10; i++){
-    writeFileSync(`${__dirname}/out/${i}-players-outer.txt`, JSON.stringify(outer[i]))
+for (let i = 5; i <= 10; i++) {
+    writeFileSync(`${__dirname}/out/new/${i}-players-outer.txt`, JSON.stringify(Simulation.cleanData(outer[i])))
 
-    writeFileSync(`${__dirname}/out/${i}-players-middle.txt`, JSON.stringify(middle[i]))
+    writeFileSync(`${__dirname}/out/new/${i}-players-middle.txt`, JSON.stringify(Simulation.cleanData(middle[i])))
 }
 
 console.log('Done!');
